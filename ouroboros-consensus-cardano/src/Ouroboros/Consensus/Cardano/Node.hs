@@ -58,6 +58,7 @@ import           Ouroboros.Consensus.Config
 import qualified Ouroboros.Consensus.HardFork.History as History
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Extended
+import           Ouroboros.Consensus.Ledger.Query.Version
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
 import           Ouroboros.Consensus.Node.Run
@@ -374,15 +375,15 @@ instance CardanoHardForkConstraints c
       ]
 
   supportedNodeToClientVersions _ = Map.fromList $
-      [ (NodeToClientV_1, CardanoNodeToClientVersion1)
-      , (NodeToClientV_2, CardanoNodeToClientVersion1)
-      , (NodeToClientV_3, CardanoNodeToClientVersion2)
-      , (NodeToClientV_4, CardanoNodeToClientVersion3)
-      , (NodeToClientV_5, CardanoNodeToClientVersion4)
-      , (NodeToClientV_6, CardanoNodeToClientVersion5)
-      , (NodeToClientV_7, CardanoNodeToClientVersion6)
-      , (NodeToClientV_8, CardanoNodeToClientVersion6)
-      , (NodeToClientV_9, CardanoNodeToClientVersion7)
+      [ (NodeToClientV_1, (TopLevelQueryDisabled, CardanoNodeToClientVersion1))
+      , (NodeToClientV_2, (TopLevelQueryDisabled, CardanoNodeToClientVersion1))
+      , (NodeToClientV_3, (TopLevelQueryDisabled, CardanoNodeToClientVersion2))
+      , (NodeToClientV_4, (TopLevelQueryDisabled, CardanoNodeToClientVersion3))
+      , (NodeToClientV_5, (TopLevelQueryDisabled, CardanoNodeToClientVersion4))
+      , (NodeToClientV_6, (TopLevelQueryDisabled, CardanoNodeToClientVersion5))
+      , (NodeToClientV_7, (TopLevelQueryDisabled, CardanoNodeToClientVersion6))
+      , (NodeToClientV_8, (TopLevelQueryDisabled, CardanoNodeToClientVersion6))
+      , (NodeToClientV_9, (TopLevelQueryDisabled, CardanoNodeToClientVersion7))
       ]
 
   -- Do not yet enable Alonzo by default

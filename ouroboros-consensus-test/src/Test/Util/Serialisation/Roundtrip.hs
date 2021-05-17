@@ -1,15 +1,16 @@
-{-# LANGUAGE ConstraintKinds     #-}
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE DeriveTraversable   #-}
-{-# LANGUAGE DerivingVia         #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE GADTs               #-}
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE RankNTypes          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE ConstraintKinds      #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE DeriveTraversable    #-}
+{-# LANGUAGE DerivingVia          #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE GADTs                #-}
+{-# LANGUAGE OverloadedStrings    #-}
+{-# LANGUAGE RankNTypes           #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Test.Util.Serialisation.Roundtrip (
     -- * Basic test helpers
@@ -48,7 +49,7 @@ import           Ouroboros.Network.Block (Serialised (..), fromSerialised,
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.HeaderValidation (AnnTip)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerState)
-import           Ouroboros.Consensus.Ledger.Query (BlockQuery, Query)
+import           Ouroboros.Consensus.Ledger.Query (BlockQuery, Query(..), QueryVersion)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
                      GenTxId)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -59,6 +60,8 @@ import           Ouroboros.Consensus.Protocol.Abstract (ChainDepState)
 import           Ouroboros.Consensus.Storage.ChainDB (SerialiseDiskConstraints)
 import           Ouroboros.Consensus.Storage.Serialisation
 import           Ouroboros.Consensus.Util (Dict (..))
+
+import           Test.Util.Orphans.Arbitrary ()
 
 import           Test.Tasty
 import           Test.Tasty.QuickCheck
@@ -212,6 +215,18 @@ data WithVersion v a = WithVersion v a
 -- @('WithVersion' v a)@.
 type ArbitraryWithVersion v a = (Arbitrary (WithVersion v a), Eq a, Show a)
 
+instance Arbitrary (WithVersion version (SomeSecond BlockQuery blk))
+      => Arbitrary (WithVersion version (SomeSecond Query blk)) where
+  arbitrary = do
+    WithVersion v (SomeSecond someBlockQuery) <- arbitrary
+    return (WithVersion v (SomeSecond (BlockQuery someBlockQuery)))
+
+-- | This is @OVERLAPPABLE@ because we have to override the default behaviour
+-- for e.g. 'Query's.
+instance {-# OVERLAPPABLE #-} (Arbitrary version, Arbitrary a)
+      => Arbitrary (WithVersion version a) where
+  arbitrary = WithVersion <$> arbitrary <*> arbitrary
+
 -- | Used to generate slightly less arbitrary values
 --
 -- Like some other QuickCheck modifiers, the exact meaning is
@@ -324,6 +339,7 @@ roundtrip_SerialiseNodeToClient
   :: forall blk.
      ( SerialiseNodeToClientConstraints blk
      , Show (BlockNodeToClientVersion blk)
+     , Arbitrary QueryVersion
      , ArbitraryWithVersion (BlockNodeToClientVersion blk) blk
      , ArbitraryWithVersion (BlockNodeToClientVersion blk) (GenTx blk)
      , ArbitraryWithVersion (BlockNodeToClientVersion blk) (ApplyTxErr blk)
@@ -345,17 +361,17 @@ roundtrip_SerialiseNodeToClient ccfg =
     , rt (Proxy @(SomeSecond Query blk))      "Query"
       -- See roundtrip_SerialiseNodeToNode for more info
     , testProperty "roundtrip Serialised blk" $
-        \(WithVersion version blk) ->
+        \queryVersion (WithVersion version blk) ->
           roundtrip @blk
-            (encodeThroughSerialised (encodeDisk ccfg) (enc version))
-            (decodeThroughSerialised (decodeDisk ccfg) (dec version))
+            (encodeThroughSerialised (encodeDisk ccfg) (enc (queryVersion, version)))
+            (decodeThroughSerialised (decodeDisk ccfg) (dec (queryVersion, version)))
             blk
       -- See roundtrip_SerialiseNodeToNode for more info
     , testProperty "roundtrip Serialised blk compat" $
-        \(WithVersion version blk) ->
+        \queryVersion (WithVersion version blk) ->
           roundtrip @blk
-            (encodeThroughSerialised (encodeDisk ccfg) (enc version))
-            (dec version)
+            (encodeThroughSerialised (encodeDisk ccfg) (enc (queryVersion, version)))
+            (dec (queryVersion, version))
             blk
     , testProperty "roundtrip Result" $
         \(WithVersion version (SomeResult query result :: SomeResult blk)) ->
@@ -366,12 +382,12 @@ roundtrip_SerialiseNodeToClient ccfg =
     ]
   where
     enc :: SerialiseNodeToClient blk a
-        => BlockNodeToClientVersion blk -> a -> Encoding
-    enc = encodeNodeToClient ccfg
+        => (QueryVersion, BlockNodeToClientVersion blk) -> a -> Encoding
+    enc (queryVersion, blockVersion) = encodeNodeToClient ccfg queryVersion blockVersion
 
     dec :: SerialiseNodeToClient blk a
-        => BlockNodeToClientVersion blk -> forall s. Decoder s a
-    dec = decodeNodeToClient ccfg
+        => (QueryVersion, BlockNodeToClientVersion blk) -> forall s. Decoder s a
+    dec (queryVersion, blockVersion) = decodeNodeToClient ccfg queryVersion blockVersion
 
     rt
       :: forall a.
@@ -383,8 +399,8 @@ roundtrip_SerialiseNodeToClient ccfg =
        => Proxy a -> String -> TestTree
     rt _ name =
       testProperty ("roundtrip " <> name) $
-        \(WithVersion version a) ->
-          roundtrip @a (enc version) (dec version) a
+        \queryVersion (WithVersion version a) ->
+          roundtrip @a (enc (queryVersion, version)) (dec (queryVersion, version)) a
 
 {-------------------------------------------------------------------------------
   Checking envelopes

@@ -11,6 +11,7 @@
 module Ouroboros.Consensus.Ledger.Query (
     BlockQuery
   , Query (..)
+  , QueryVersion (..)
   , QueryLedger (..)
   , ShowQuery (..)
   , answerQuery
@@ -23,6 +24,7 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Type
                      (ShowQuery (..))
 
 import           Ouroboros.Consensus.Ledger.Extended
+import           Ouroboros.Consensus.Ledger.Query.Version
 import           Ouroboros.Consensus.Node.Serialisation
                      (SerialiseNodeToClient (..), SerialiseResult (..))
 import           Ouroboros.Consensus.Util (ShowProxy (..), SomeSecond (..))
@@ -50,19 +52,21 @@ instance Show (SomeSecond BlockQuery blk) => Show (SomeSecond Query blk) where
   show (SomeSecond (BlockQuery blockQueryA)) = "Query " ++ show (SomeSecond blockQueryA)
 
 instance SerialiseNodeToClient blk (SomeSecond BlockQuery blk) => SerialiseNodeToClient blk (SomeSecond Query blk) where
-  encodeNodeToClient codecConfig blockVersion (SomeSecond (BlockQuery blockQuery))
+  encodeNodeToClient codecConfig queryVersion blockVersion (SomeSecond (BlockQuery blockQuery))
     = encodeNodeToClient
         @blk
         @(SomeSecond BlockQuery blk)
         codecConfig
+        queryVersion
         blockVersion
         (SomeSecond blockQuery)
 
-  decodeNodeToClient codecConfig blockVersion = do
+  decodeNodeToClient codecConfig queryVersion blockVersion = do
     SomeSecond blockQuery <- decodeNodeToClient
         @blk
         @(SomeSecond BlockQuery blk)
         codecConfig
+        queryVersion
         blockVersion
     return (SomeSecond (BlockQuery blockQuery))
 

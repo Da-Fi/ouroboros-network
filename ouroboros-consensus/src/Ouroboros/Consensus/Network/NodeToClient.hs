@@ -165,10 +165,11 @@ defaultCodecs :: forall m blk.
                  , ShowQuery (BlockQuery blk)
                  )
               => CodecConfig blk
+              -> QueryVersion
               -> BlockNodeToClientVersion blk
               -> N.NodeToClientVersion
               -> DefaultCodecs blk m
-defaultCodecs ccfg version networkVersion = Codecs {
+defaultCodecs ccfg queryVersion version networkVersion = Codecs {
       cChainSyncCodec =
         codecChainSync
           enc
@@ -200,10 +201,10 @@ defaultCodecs ccfg version networkVersion = Codecs {
     p = Proxy
 
     enc :: SerialiseNodeToClient blk a => a -> Encoding
-    enc = encodeNodeToClient ccfg version
+    enc = encodeNodeToClient ccfg queryVersion version
 
     dec :: SerialiseNodeToClient blk a => forall s. Decoder s a
-    dec = decodeNodeToClient ccfg version
+    dec = decodeNodeToClient ccfg queryVersion version
 
 -- | Protocol codecs for the node-to-client protocols which serialise
 -- / deserialise blocks in /chain-sync/ protocol.
@@ -214,10 +215,11 @@ clientCodecs :: forall m blk.
                 , ShowQuery (BlockQuery blk)
                 )
              => CodecConfig blk
+             -> QueryVersion
              -> BlockNodeToClientVersion blk
              -> N.NodeToClientVersion
              -> ClientCodecs blk m
-clientCodecs ccfg version networkVersion = Codecs {
+clientCodecs ccfg queryVersion version networkVersion = Codecs {
       cChainSyncCodec =
         codecChainSync
           enc
@@ -249,10 +251,10 @@ clientCodecs ccfg version networkVersion = Codecs {
     p = Proxy
 
     enc :: SerialiseNodeToClient blk a => a -> Encoding
-    enc = encodeNodeToClient ccfg version
+    enc = encodeNodeToClient ccfg queryVersion version
 
     dec :: SerialiseNodeToClient blk a => forall s. Decoder s a
-    dec = decodeNodeToClient ccfg version
+    dec = decodeNodeToClient ccfg queryVersion version
 
 -- | Identity codecs used in tests.
 identityCodecs :: (Monad m, QueryLedger blk)

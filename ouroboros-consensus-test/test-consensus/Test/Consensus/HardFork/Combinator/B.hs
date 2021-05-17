@@ -423,12 +423,12 @@ instance SerialiseNodeToClient BlockB (Serialised BlockB)
 instance SerialiseNodeToClient BlockB (GenTx BlockB)
 
 instance SerialiseNodeToClient BlockB Void where
-  encodeNodeToClient _ _ = absurd
-  decodeNodeToClient _ _ = fail "no ApplyTxErr to be decoded"
+  encodeNodeToClient _ _ _ = absurd
+  decodeNodeToClient _ _ _ = fail "no ApplyTxErr to be decoded"
 
 instance SerialiseNodeToClient BlockB (SomeSecond BlockQuery BlockB) where
-  encodeNodeToClient _ _ = \case {}
-  decodeNodeToClient _ _ = fail "there are no queries to be decoded"
+  encodeNodeToClient _ _ _ = \case {}
+  decodeNodeToClient _ _ _ = fail "there are no queries to be decoded"
 
 instance SerialiseResult BlockB (BlockQuery BlockB) where
   encodeResult _ _ = \case {}

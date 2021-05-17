@@ -9,6 +9,7 @@ module Ouroboros.Consensus.Byron.Ledger.NetworkProtocolVersion (
 
 import qualified Data.Map.Strict as Map
 
+import           Ouroboros.Consensus.Ledger.Query.Version
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 
 import           Ouroboros.Consensus.Byron.Ledger.Block
@@ -36,9 +37,9 @@ instance SupportedNetworkProtocolVersion ByronBlock where
         -- combinator, not supported by Byron-only.
       ]
   supportedNodeToClientVersions _ = Map.fromList [
-        (NodeToClientV_1, ByronNodeToClientVersion1)
+        (NodeToClientV_1, (TopLevelQueryDisabled, ByronNodeToClientVersion1))
         -- Enable the LocalStateQuery protocol, no serialisation changes
-      , (NodeToClientV_2, ByronNodeToClientVersion1)
+      , (NodeToClientV_2, (TopLevelQueryDisabled, ByronNodeToClientVersion1))
         -- V_3 enables the hard fork, not supported by Byron-only.
       ]
 

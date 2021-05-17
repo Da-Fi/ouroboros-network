@@ -133,8 +133,8 @@ instance ShelleyBasedEra era => SerialiseNodeToClientConstraints (ShelleyBlock e
 -- | CBOR-in-CBOR for the annotation. This also makes it compatible with the
 -- wrapped ('Serialised') variant.
 instance ShelleyBasedEra era => SerialiseNodeToClient (ShelleyBlock era) (ShelleyBlock era) where
-  encodeNodeToClient _ _ = wrapCBORinCBOR   encodeShelleyBlock
-  decodeNodeToClient _ _ = unwrapCBORinCBOR decodeShelleyBlock
+  encodeNodeToClient _ _ _ = wrapCBORinCBOR   encodeShelleyBlock
+  decodeNodeToClient _ _ _ = unwrapCBORinCBOR decodeShelleyBlock
 
 -- | 'Serialised' uses CBOR-in-CBOR by default.
 instance SerialiseNodeToClient (ShelleyBlock era) (Serialised (ShelleyBlock era))
@@ -142,22 +142,22 @@ instance SerialiseNodeToClient (ShelleyBlock era) (Serialised (ShelleyBlock era)
 
 -- | Uses CBOR-in-CBOR in the @To/FromCBOR@ instances to get the annotation.
 instance ShelleyBasedEra era => SerialiseNodeToClient (ShelleyBlock era) (GenTx (ShelleyBlock era)) where
-  encodeNodeToClient _ _ = toCBOR
-  decodeNodeToClient _ _ = fromCBOR
+  encodeNodeToClient _ _ _ = toCBOR
+  decodeNodeToClient _ _ _ = fromCBOR
 
 -- | @'ApplyTxErr' '(ShelleyBlock era)'@
 instance ShelleyBasedEra era => SerialiseNodeToClient (ShelleyBlock era) (SL.ApplyTxError era) where
-  encodeNodeToClient _ _ = toCBOR
-  decodeNodeToClient _ _ = fromCBOR
+  encodeNodeToClient _ _ _ = toCBOR
+  decodeNodeToClient _ _ _ = fromCBOR
 
 instance ShelleyBasedEra era
       => SerialiseNodeToClient (ShelleyBlock era) (SomeSecond BlockQuery (ShelleyBlock era)) where
-  encodeNodeToClient _ version (SomeSecond q)
+  encodeNodeToClient _ _ version (SomeSecond q)
     | querySupportedVersion q version
     = encodeShelleyQuery q
     | otherwise
     = throw $ ShelleyEncoderUnsupportedQuery (SomeSecond q) version
-  decodeNodeToClient _ _ = decodeShelleyQuery
+  decodeNodeToClient _ _ _ = decodeShelleyQuery
 
 instance ShelleyBasedEra era => SerialiseResult (ShelleyBlock era) (BlockQuery (ShelleyBlock era)) where
   encodeResult _ _ = encodeShelleyResult

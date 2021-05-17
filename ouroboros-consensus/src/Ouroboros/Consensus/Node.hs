@@ -84,6 +84,7 @@ import           Ouroboros.Consensus.Fragment.InFuture (CheckInFuture,
                      ClockSkew)
 import qualified Ouroboros.Consensus.Fragment.InFuture as InFuture
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState (..))
+import           Ouroboros.Consensus.Ledger.Query
 import qualified Ouroboros.Consensus.Network.NodeToClient as NTC
 import qualified Ouroboros.Consensus.Network.NodeToNode as NTN
 import           Ouroboros.Consensus.Node.DbLock
@@ -196,7 +197,7 @@ data LowLevelRunNodeArgs m addrNTN addrNTC versionDataNTN versionDataNTC blk = L
     , llrnNodeToNodeVersions :: Map NodeToNodeVersion (BlockNodeToNodeVersion blk)
 
       -- | node-to-client protocol versions to run.
-    , llrnNodeToClientVersions :: Map NodeToClientVersion (BlockNodeToClientVersion blk)
+    , llrnNodeToClientVersions :: Map NodeToClientVersion (QueryVersion, BlockNodeToClientVersion blk)
 
       -- | Maximum clock skew
     , llrnMaxClockSkew :: ClockSkew
@@ -328,14 +329,15 @@ runWith RunNodeArgs{..} LowLevelRunNodeArgs{..} =
     mkNodeToClientApps
       :: NodeKernelArgs m (ConnectionId addrNTN) (ConnectionId addrNTC) blk
       -> NodeKernel     m (ConnectionId addrNTN) (ConnectionId addrNTC) blk
+      -> QueryVersion
       -> BlockNodeToClientVersion blk
       -> NodeToClientVersion
       -> NTC.Apps m (ConnectionId addrNTC) ByteString ByteString ByteString ()
-    mkNodeToClientApps nodeKernelArgs nodeKernel blockVersion networkVersion =
+    mkNodeToClientApps nodeKernelArgs nodeKernel queryVersion blockVersion networkVersion =
         NTC.mkApps
           nodeKernel
           rnTraceNTC
-          (NTC.defaultCodecs codecConfig blockVersion networkVersion)
+          (NTC.defaultCodecs codecConfig queryVersion blockVersion networkVersion)
           (NTC.mkHandlers nodeKernelArgs nodeKernel)
 
     mkDiffusionApplications
@@ -343,7 +345,8 @@ runWith RunNodeArgs{..} LowLevelRunNodeArgs{..} =
       -> (   BlockNodeToNodeVersion blk
           -> NTN.Apps m (ConnectionId addrNTN) ByteString ByteString ByteString ByteString ByteString ()
          )
-      -> (   BlockNodeToClientVersion blk
+      -> (   QueryVersion
+          -> BlockNodeToClientVersion blk
           -> NodeToClientVersion
           -> NTC.Apps m (ConnectionId addrNTC) ByteString ByteString ByteString ()
          )
@@ -372,8 +375,8 @@ runWith RunNodeArgs{..} LowLevelRunNodeArgs{..} =
               simpleSingletonVersions
                 version
                 llrnVersionDataNTC
-                (NTC.responder version $ ntcApps blockVersion version)
-            | (version, blockVersion) <- Map.toList llrnNodeToClientVersions
+                (NTC.responder version $ ntcApps queryVersion blockVersion version)
+            | (version, (queryVersion, blockVersion)) <- Map.toList llrnNodeToClientVersions
             ]
         , daErrorPolicies = consensusErrorPolicy (Proxy @blk)
         , daLedgerPeersCtx = LedgerPeersConsensusInterface (getPeersFromCurrentLedgerAfterSlot kernel)

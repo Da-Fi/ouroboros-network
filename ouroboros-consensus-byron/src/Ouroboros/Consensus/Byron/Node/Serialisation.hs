@@ -153,8 +153,8 @@ instance SerialiseNodeToClientConstraints ByronBlock
 -- | CBOR-in-CBOR for the annotation. This also makes it compatible with the
 -- wrapped ('Serialised') variant.
 instance SerialiseNodeToClient ByronBlock ByronBlock where
-  encodeNodeToClient _    _ = wrapCBORinCBOR    encodeByronBlock
-  decodeNodeToClient ccfg _ = unwrapCBORinCBOR (decodeByronBlock epochSlots)
+  encodeNodeToClient _    _ _ = wrapCBORinCBOR    encodeByronBlock
+  decodeNodeToClient ccfg _ _ = unwrapCBORinCBOR (decodeByronBlock epochSlots)
     where
       epochSlots = getByronEpochSlots ccfg
 
@@ -165,17 +165,17 @@ instance SerialiseNodeToClient ByronBlock (Serialised ByronBlock)
 -- | No CBOR-in-CBOR, because we check for canonical encodings, which means we
 -- can use the recomputed encoding for the annotation.
 instance SerialiseNodeToClient ByronBlock (GenTx ByronBlock) where
-  encodeNodeToClient _ _ = encodeByronGenTx
-  decodeNodeToClient _ _ = decodeByronGenTx
+  encodeNodeToClient _ _ _ = encodeByronGenTx
+  decodeNodeToClient _ _ _ = decodeByronGenTx
 
 -- | @'ApplyTxErr' 'ByronBlock'@
 instance SerialiseNodeToClient ByronBlock CC.ApplyMempoolPayloadErr where
-  encodeNodeToClient _ _ = encodeByronApplyTxError
-  decodeNodeToClient _ _ = decodeByronApplyTxError
+  encodeNodeToClient _ _ _ = encodeByronApplyTxError
+  decodeNodeToClient _ _ _ = decodeByronApplyTxError
 
 instance SerialiseNodeToClient ByronBlock (SomeSecond BlockQuery ByronBlock) where
-  encodeNodeToClient _ _ (SomeSecond q) = encodeByronQuery q
-  decodeNodeToClient _ _               = decodeByronQuery
+  encodeNodeToClient _ _ _ (SomeSecond q) = encodeByronQuery q
+  decodeNodeToClient _ _ _               = decodeByronQuery
 
 instance SerialiseResult ByronBlock (BlockQuery ByronBlock) where
   encodeResult _ _ = encodeByronResult

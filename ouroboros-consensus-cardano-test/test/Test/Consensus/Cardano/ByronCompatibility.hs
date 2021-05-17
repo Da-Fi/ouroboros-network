@@ -10,6 +10,13 @@
 {-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
+-- | The purpose of these tests are to ensure that when in the Byron era, nodes
+--  using @CardanoBlock@ can still communicate with older nodes using
+--  @ByronBlock@. This is tested by running roundtrip tests using the encoders
+--  of @ByronBlock@ and the decoders of @CardanoBlock@ and vice versa. By
+--  introducing a newtype wrapper for each direction, we are able to reuse the
+--  existing roundtrip test functions.
 module Test.Consensus.Cardano.ByronCompatibility (tests) where
 
 import           Codec.CBOR.Decoding (Decoder)
@@ -304,36 +311,58 @@ instance SerialiseNodeToNodeConstraints ByronToCardano where
   Byron to Cardano: NodeToClient
 ------------------------------------------------------------------------------}
 
+-- | We want to encode byron-to-cardano compatibility types using byron
+-- serializations. With that in mind, this is a helper function for implementing
+-- @encodeNodeToClient@ for byron-to-cardano compatibility type: @b2c@. This
+-- works by projecting to the byron type and encoding that.
 encodeNodeToClientB2C ::
      forall f byron b2c.
      ( SerialiseNodeToClient ByronBlock (f ByronBlock)
      , Coercible byron (f ByronBlock)
      )
   => Proxy f
+  -- ^ @f@ is an intermediate type, used for its @SerialiseNodeToClient@
+  -- instance. @f@ is usually a newtype that wraps a @byron@ value.
   -> (b2c -> byron)
+  -- ^ Convert (usually a simple projection) from the byron-to-cardano
+  -- compatibility type to the byron type.
   -> CodecConfig ByronToCardano
+  -> QueryVersion
   -> BlockNodeToClientVersion ByronToCardano
   -> b2c
+  -- ^ The value to encode
   -> Encoding
-encodeNodeToClientB2C _ toByron (CodecConfigB2C ccfg) () x =
-    encodeNodeToClient ccfg byronNodeToClientVersion (toByron' x)
+encodeNodeToClientB2C _ toByron (CodecConfigB2C ccfg) queryVersion () x =
+    encodeNodeToClient @ByronBlock ccfg queryVersion byronNodeToClientVersion (toByron' x)
   where
     toByron' :: b2c -> f ByronBlock
     toByron' = coerce . toByron
 
+-- | We want to decode byron serializations into byron-to-cardano compatibility
+-- types. With that in mind, this is a helper function for implementing
+-- @decodeNodeToClient@ for byron-to-cardano compatibility type: @b2c@. This
+-- works by decoding as the byron type and wrapping that in the byron-to-cardano
+-- compatibility type.
 decodeNodeToClientB2C ::
      forall f cardano b2c.
      ( SerialiseNodeToClient (CardanoBlock Crypto) (f (CardanoBlock Crypto))
      , Coercible cardano (f (CardanoBlock Crypto))
      )
   => Proxy f
+  -- ^ @f@ is an intermediate type, used for its @SerialiseNodeToClient@
+  -- instance. @f@ is usually a newtype that wraps a @byron@ value.
   -> (cardano -> b2c)
   -> CodecConfig ByronToCardano
+  -> QueryVersion
   -> BlockNodeToClientVersion ByronToCardano
   -> forall s. Decoder s b2c
-decodeNodeToClientB2C _ fromCardano (CodecConfigB2C ccfg) () =
+decodeNodeToClientB2C _ fromCardano (CodecConfigB2C ccfg) queryVersion () =
     fromCardano' <$>
-      decodeNodeToClient (toCardanoCodecConfig ccfg) cardanoNodeToClientVersion
+      decodeNodeToClient
+        @(CardanoBlock Crypto)
+        (toCardanoCodecConfig ccfg)
+        queryVersion
+        cardanoNodeToClientVersion
   where
     fromCardano' :: f (CardanoBlock Crypto) -> b2c
     fromCardano' = fromCardano . coerce
@@ -593,12 +622,15 @@ encodeNodeToClientC2B ::
   => Proxy f
   -> (c2b -> cardano)
   -> CodecConfig CardanoToByron
+  -> QueryVersion
   -> BlockNodeToClientVersion CardanoToByron
   -> c2b
   -> Encoding
-encodeNodeToClientC2B _ toCardano (CodecConfigC2B ccfg) () x =
+encodeNodeToClientC2B _ toCardano (CodecConfigC2B ccfg) queryVersion () x =
     encodeNodeToClient
+      @(CardanoBlock Crypto)
       (toCardanoCodecConfig ccfg)
+      queryVersion
       cardanoNodeToClientVersion
       (toCardano' x)
   where
@@ -613,10 +645,11 @@ decodeNodeToClientC2B ::
   => Proxy f
   -> (byron -> c2b)
   -> CodecConfig CardanoToByron
+  -> QueryVersion
   -> BlockNodeToClientVersion CardanoToByron
   -> forall s. Decoder s c2b
-decodeNodeToClientC2B _ fromByron (CodecConfigC2B ccfg) () =
-    fromByron' <$> decodeNodeToClient ccfg byronNodeToClientVersion
+decodeNodeToClientC2B _ fromByron (CodecConfigC2B ccfg) queryVersion () =
+    fromByron' <$> decodeNodeToClient @ByronBlock ccfg queryVersion byronNodeToClientVersion
   where
     fromByron' :: f ByronBlock -> c2b
     fromByron' = fromByron . coerce

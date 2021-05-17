@@ -16,6 +16,7 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Proxy
 
+import           Ouroboros.Consensus.Ledger.Query.Version
 import           Ouroboros.Network.NodeToClient
 import           Ouroboros.Network.NodeToNode
 
@@ -44,7 +45,7 @@ class HasNetworkProtocolVersion blk => SupportedNetworkProtocolVersion blk where
 
   -- | Enumerate all supported node-to-client versions
   supportedNodeToClientVersions
-    :: Proxy blk -> Map NodeToClientVersion (BlockNodeToClientVersion blk)
+    :: Proxy blk -> Map NodeToClientVersion (QueryVersion, BlockNodeToClientVersion blk)
 
   -- | The latest released version
   --

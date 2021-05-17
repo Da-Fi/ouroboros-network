@@ -29,6 +29,7 @@ import           Data.SOP.Strict
 import           Data.Void (Void)
 
 import           Ouroboros.Consensus.Ledger.Basics (LedgerConfig)
+import           Ouroboros.Consensus.Ledger.Query.Version
 import           Ouroboros.Consensus.Node
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.TypeFamilyWrappers
@@ -102,14 +103,16 @@ pattern ShelleyBasedHardForkNodeToNodeVersion1 =
       )
 
 pattern ShelleyBasedHardForkNodeToClientVersion1 ::
-     BlockNodeToClientVersion (ShelleyBasedHardForkBlock era1 era2)
-pattern ShelleyBasedHardForkNodeToClientVersion1 =
-    HardForkNodeToClientEnabled
+     (QueryVersion, BlockNodeToClientVersion (ShelleyBasedHardForkBlock era1 era2))
+pattern ShelleyBasedHardForkNodeToClientVersion1 = (
+    TopLevelQueryDisabled
+  , HardForkNodeToClientEnabled
       HardForkSpecificNodeToClientVersion2
       (  EraNodeToClientEnabled ShelleyNodeToClientVersion2
       :* EraNodeToClientEnabled ShelleyNodeToClientVersion2
       :* Nil
       )
+  )
 
 {-------------------------------------------------------------------------------
   Consensus instances

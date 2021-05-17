@@ -55,7 +55,7 @@ import           Ouroboros.Consensus.HeaderValidation (AnnTip)
 import           Ouroboros.Consensus.Ledger.Abstract (LedgerState)
 import           Ouroboros.Consensus.Ledger.Extended (ExtLedgerState,
                      encodeExtLedgerState)
-import           Ouroboros.Consensus.Ledger.Query (BlockQuery)
+import           Ouroboros.Consensus.Ledger.Query (BlockQuery, QueryVersion)
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr, GenTx,
                      GenTxId)
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
@@ -315,6 +315,12 @@ class ToGoldenDirectory a where
   default toGoldenDirectory :: Show a => a -> FilePath
   toGoldenDirectory = show
 
+instance (ToGoldenDirectory a, ToGoldenDirectory b) => ToGoldenDirectory (a, b) where
+  toGoldenDirectory (a, b) = toGoldenDirectory a </> toGoldenDirectory b
+
+instance ToGoldenDirectory QueryVersion where
+  -- Use defaults
+
 -- | Golden tests for all things we serialise to disk and send across the
 -- network.
 --
@@ -434,8 +440,8 @@ goldenTest_SerialiseNodeToClient codecConfig goldenDir Examples {..} =
       | version <- nub $ Map.elems $ supportedNodeToClientVersions $ Proxy @blk
       ]
   where
-    testVersion :: BlockNodeToClientVersion blk -> TestTree
-    testVersion version = testGroup (toGoldenDirectory version) [
+    testVersion :: (QueryVersion, BlockNodeToClientVersion blk) -> TestTree
+    testVersion version@(queryVersion, blockVersion) = testGroup (toGoldenDirectory version) [
           test "Block"           exampleBlock           enc'
         , test "SerialisedBlock" exampleSerialisedBlock enc'
         , test "GenTx"           exampleGenTx           enc'
@@ -446,10 +452,10 @@ goldenTest_SerialiseNodeToClient codecConfig goldenDir Examples {..} =
       where
 
         enc' :: SerialiseNodeToClient blk a => a -> Encoding
-        enc' = encodeNodeToClient codecConfig version
+        enc' = encodeNodeToClient codecConfig queryVersion blockVersion
 
         encRes :: SomeResult blk -> Encoding
-        encRes (SomeResult q r) = encodeResult codecConfig version q r
+        encRes (SomeResult q r) = encodeResult codecConfig blockVersion q r
 
         test :: TestName -> Labelled a -> (a -> Encoding) -> TestTree
         test testName exampleValues enc =

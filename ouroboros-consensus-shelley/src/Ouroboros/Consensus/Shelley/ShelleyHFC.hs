@@ -94,7 +94,7 @@ instance ShelleyBasedEra era
       supportedNodeToNodeVersions (Proxy @(ShelleyBlock era))
 
   supportedNodeToClientVersions _ =
-      Map.map HardForkNodeToClientDisabled $
+      Map.map (fmap HardForkNodeToClientDisabled) $
       supportedNodeToClientVersions (Proxy @(ShelleyBlock era))
 
   latestReleasedNodeVersion = latestReleasedNodeVersionDefault

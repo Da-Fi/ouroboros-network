@@ -102,16 +102,16 @@ instance SerialiseNodeToNode (MockBlock ext) (GenTxId (MockBlock ext))
 instance Serialise ext => SerialiseNodeToClientConstraints (MockBlock ext)
 
 instance Serialise ext => SerialiseNodeToClient (MockBlock ext) (MockBlock ext) where
-  encodeNodeToClient _ _ = defaultEncodeCBORinCBOR
-  decodeNodeToClient _ _ = defaultDecodeCBORinCBOR
+  encodeNodeToClient _ _ _ = defaultEncodeCBORinCBOR
+  decodeNodeToClient _ _ _ = defaultDecodeCBORinCBOR
 
 instance SerialiseNodeToClient (MockBlock ext) (Serialised (MockBlock ext))
 instance SerialiseNodeToClient (MockBlock ext) (GenTx (MockBlock ext))
 instance SerialiseNodeToClient (MockBlock ext) (MockError (MockBlock ext))
 
 instance SerialiseNodeToClient (MockBlock ext) (SomeSecond BlockQuery (MockBlock ext)) where
-  encodeNodeToClient _ _ (SomeSecond QueryLedgerTip) = encode ()
-  decodeNodeToClient _ _ = (\() -> SomeSecond QueryLedgerTip) <$> decode
+  encodeNodeToClient _ _ _ (SomeSecond QueryLedgerTip) = encode ()
+  decodeNodeToClient _ _ _ = (\() -> SomeSecond QueryLedgerTip) <$> decode
 
 instance SerialiseResult (MockBlock ext) (BlockQuery (MockBlock ext)) where
   encodeResult _ _ QueryLedgerTip = encode

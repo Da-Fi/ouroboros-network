@@ -40,6 +40,7 @@ import           Ouroboros.Consensus.Config
 import           Ouroboros.Consensus.HeaderValidation
 import           Ouroboros.Consensus.Ledger.Abstract
 import           Ouroboros.Consensus.Ledger.Extended
+import           Ouroboros.Consensus.Ledger.Query
 import           Ouroboros.Consensus.Ledger.SupportsMempool
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.Node.ProtocolInfo
@@ -386,6 +387,9 @@ versionN2N =
       :* Nil
       )
 
+versionQuery :: QueryVersion
+versionQuery = maxBound
+
 versionN2C :: BlockNodeToClientVersion TestBlock
 versionN2C =
     HardForkNodeToClientEnabled
@@ -397,7 +401,7 @@ versionN2C =
 
 instance SupportedNetworkProtocolVersion TestBlock where
   supportedNodeToNodeVersions   _ = Map.singleton maxBound versionN2N
-  supportedNodeToClientVersions _ = Map.singleton maxBound versionN2C
+  supportedNodeToClientVersions _ = Map.singleton maxBound (versionQuery, versionN2C)
 
   latestReleasedNodeVersion = latestReleasedNodeVersionDefault
 

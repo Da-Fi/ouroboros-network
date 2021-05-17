@@ -38,6 +38,7 @@ import           Ouroboros.Network.Protocol.LocalStateQuery.Codec (Some (..))
 import           Ouroboros.Consensus.Block
 import           Ouroboros.Consensus.Ledger.SupportsMempool (ApplyTxErr,
                      GenTxId)
+import           Ouroboros.Consensus.Ledger.Query.Version
 import           Ouroboros.Consensus.Node.NetworkProtocolVersion
 import           Ouroboros.Consensus.TypeFamilyWrappers
 
@@ -71,21 +72,21 @@ class SerialiseNodeToNode blk a where
 -- | Serialise a type @a@ so that it can be sent across the network via
 -- node-to-client protocol.
 class SerialiseNodeToClient blk a where
-  encodeNodeToClient :: CodecConfig blk -> BlockNodeToClientVersion blk -> a -> Encoding
-  decodeNodeToClient :: CodecConfig blk -> BlockNodeToClientVersion blk -> forall s. Decoder s a
+  encodeNodeToClient :: CodecConfig blk -> QueryVersion -> BlockNodeToClientVersion blk -> a -> Encoding
+  decodeNodeToClient :: CodecConfig blk -> QueryVersion -> BlockNodeToClientVersion blk -> forall s. Decoder s a
 
   -- When the config is not needed, we provide a default, unversioned
   -- implementation using 'Serialise'
 
   default encodeNodeToClient
     :: Serialise a
-    => CodecConfig blk -> BlockNodeToClientVersion blk -> a -> Encoding
-  encodeNodeToClient _ccfg _version = encode
+    => CodecConfig blk -> QueryVersion -> BlockNodeToClientVersion blk -> a -> Encoding
+  encodeNodeToClient _ccfg _queryVersion _version = encode
 
   default decodeNodeToClient
     :: Serialise a
-    => CodecConfig blk -> BlockNodeToClientVersion blk -> forall s. Decoder s a
-  decodeNodeToClient _ccfg _version = decode
+    => CodecConfig blk -> QueryVersion -> BlockNodeToClientVersion blk -> forall s. Decoder s a
+  decodeNodeToClient _ccfg _queryVersion _version = decode
 
 {-------------------------------------------------------------------------------
   NodeToClient - SerialiseResult
@@ -138,10 +139,10 @@ instance SerialiseNodeToNode blk blk
 
 instance SerialiseNodeToClient blk blk
       => SerialiseNodeToClient blk (I blk) where
-  encodeNodeToClient cfg version (I h) =
-      encodeNodeToClient cfg version h
-  decodeNodeToClient cfg version =
-      I <$> decodeNodeToClient cfg version
+  encodeNodeToClient cfg queryVersion version (I h) =
+      encodeNodeToClient cfg queryVersion version h
+  decodeNodeToClient cfg queryVersion version =
+      I <$> decodeNodeToClient cfg queryVersion version
 
 instance SerialiseNodeToNode blk (GenTxId     blk)
       => SerialiseNodeToNode blk (WrapGenTxId blk) where
@@ -152,7 +153,7 @@ instance SerialiseNodeToNode blk (GenTxId     blk)
 
 instance SerialiseNodeToClient blk (ApplyTxErr     blk)
       => SerialiseNodeToClient blk (WrapApplyTxErr blk) where
-  encodeNodeToClient cfg version (WrapApplyTxErr h) =
-      encodeNodeToClient cfg version h
-  decodeNodeToClient cfg version =
-      WrapApplyTxErr <$> decodeNodeToClient cfg version
+  encodeNodeToClient cfg queryVersion version (WrapApplyTxErr h) =
+      encodeNodeToClient cfg queryVersion version h
+  decodeNodeToClient cfg queryVersion version =
+      WrapApplyTxErr <$> decodeNodeToClient cfg queryVersion version

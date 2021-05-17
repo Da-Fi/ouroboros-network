@@ -263,7 +263,7 @@ instance c ~ MockCryptoCompatByron
 instance CardanoHardForkConstraints c
       => Arbitrary (HardForkNodeToClientVersion (CardanoEras c)) where
   arbitrary =
-    elements $ Map.elems $ supportedNodeToClientVersions (Proxy @(CardanoBlock c))
+    elements $ fmap snd $ Map.elems $ supportedNodeToClientVersions (Proxy @(CardanoBlock c))
 
 newtype HardForkEnabledNodeToClientVersion c = HardForkEnabledNodeToClientVersion {
       getHardForkEnabledNodeToClientVersion :: HardForkNodeToClientVersion (CardanoEras c)
@@ -280,6 +280,7 @@ instance CardanoHardForkConstraints c
         elements
       . map HardForkEnabledNodeToClientVersion
       . filter isHardForkNodeToClientEnabled
+      . map snd
       . Map.elems
       . supportedNodeToClientVersions
       $ Proxy @(CardanoBlock c)
@@ -296,6 +297,7 @@ genWithHardForkSpecificNodeToClientVersion ::
 genWithHardForkSpecificNodeToClientVersion p =
       elements
     . filter p'
+    . map snd
     . Map.elems
     . supportedNodeToClientVersions
     $ Proxy @(CardanoBlock c)

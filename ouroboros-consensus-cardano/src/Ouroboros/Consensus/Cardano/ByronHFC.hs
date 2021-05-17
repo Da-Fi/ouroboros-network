@@ -55,7 +55,7 @@ instance SupportedNetworkProtocolVersion ByronBlockHFC where
       supportedNodeToNodeVersions (Proxy @ByronBlock)
 
   supportedNodeToClientVersions _ =
-      Map.map HardForkNodeToClientDisabled $
+      Map.map (fmap HardForkNodeToClientDisabled) $
       supportedNodeToClientVersions (Proxy @ByronBlock)
 
   latestReleasedNodeVersion = latestReleasedNodeVersionDefault

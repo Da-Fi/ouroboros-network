@@ -43,7 +43,7 @@ instance HasNetworkProtocolVersion (SimpleBlock SimpleMockCrypto ext) where
 
 instance SupportedNetworkProtocolVersion (SimpleBlock SimpleMockCrypto ext) where
   supportedNodeToNodeVersions   _ = Map.singleton maxBound ()
-  supportedNodeToClientVersions _ = Map.singleton maxBound ()
+  supportedNodeToClientVersions _ = Map.singleton maxBound (maxBound, ())
 
   latestReleasedNodeVersion = latestReleasedNodeVersionDefault
 

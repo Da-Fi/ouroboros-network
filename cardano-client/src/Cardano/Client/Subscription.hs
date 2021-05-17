@@ -47,6 +47,7 @@ import           Ouroboros.Network.Protocol.Handshake.Version (Versions,
 import qualified Ouroboros.Network.Snocket as Snocket
 
 import           Ouroboros.Consensus.Block (CodecConfig)
+import           Ouroboros.Consensus.Ledger.Query.Version
 import           Ouroboros.Consensus.Network.NodeToClient (ClientCodecs,
                      cChainSyncCodec, cStateQueryCodec, cTxSubmissionCodec,
                      clientCodecs)
@@ -102,13 +103,13 @@ versionedProtocols codecConfig networkMagic callback =
       Map.toList $ supportedNodeToClientVersions (Proxy @blk)
   where
     applyVersion ::
-         (NodeToClientVersion, BlockNodeToClientVersion blk)
+         (NodeToClientVersion, (QueryVersion, BlockNodeToClientVersion blk))
       -> Versions
            NodeToClientVersion
            NodeToClientVersionData
            (OuroborosApplication appType LocalAddress bytes m a b)
-    applyVersion (version, blockVersion) =
+    applyVersion (n2cVersion, (queryVersion, n2cBlockVersion)) =
       versionedNodeToClientProtocols
-        version
+        n2cVersion
         (NodeToClientVersionData networkMagic)
-        (callback version (clientCodecs codecConfig blockVersion version))
+        (callback n2cVersion (clientCodecs codecConfig queryVersion n2cBlockVersion n2cVersion))

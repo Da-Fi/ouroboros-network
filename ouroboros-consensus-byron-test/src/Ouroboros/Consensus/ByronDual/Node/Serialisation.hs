@@ -144,8 +144,8 @@ instance SerialiseNodeToClientConstraints DualByronBlock
 -- | CBOR-in-CBOR for the annotation. This also makes it compatible with the
 -- wrapped ('Serialised') variant.
 instance SerialiseNodeToClient DualByronBlock DualByronBlock where
-  encodeNodeToClient _    _ = wrapCBORinCBOR   (encodeDualBlock  encodeByronBlock)
-  decodeNodeToClient ccfg _ = unwrapCBORinCBOR (decodeDualBlock (decodeByronBlock epochSlots))
+  encodeNodeToClient _    _ _ = wrapCBORinCBOR   (encodeDualBlock  encodeByronBlock)
+  decodeNodeToClient ccfg _ _ = unwrapCBORinCBOR (decodeDualBlock (decodeByronBlock epochSlots))
     where
       epochSlots = extractEpochSlots ccfg
 
@@ -155,17 +155,17 @@ instance SerialiseNodeToClient DualByronBlock (Serialised DualByronBlock)
   -- Default instance
 
 instance SerialiseNodeToClient DualByronBlock (GenTx DualByronBlock) where
-  encodeNodeToClient _ _ = encodeDualGenTx encodeByronGenTx
-  decodeNodeToClient _ _ = decodeDualGenTx decodeByronGenTx
+  encodeNodeToClient _ _ _ = encodeDualGenTx encodeByronGenTx
+  decodeNodeToClient _ _ _ = decodeDualGenTx decodeByronGenTx
 
 -- | @'ApplyTxErr' 'DualByronBlock'@
 instance SerialiseNodeToClient DualByronBlock (DualGenTxErr ByronBlock ByronSpecBlock) where
-  encodeNodeToClient _ _ = encodeDualGenTxErr encodeByronApplyTxError
-  decodeNodeToClient _ _ = decodeDualGenTxErr decodeByronApplyTxError
+  encodeNodeToClient _ _ _ = encodeDualGenTxErr encodeByronApplyTxError
+  decodeNodeToClient _ _ _ = decodeDualGenTxErr decodeByronApplyTxError
 
 instance SerialiseNodeToClient DualByronBlock (SomeSecond BlockQuery DualByronBlock) where
-  encodeNodeToClient _ _ = \case {}
-  decodeNodeToClient _ _ = error "DualByron: no query to decode"
+  encodeNodeToClient _ _ _ = \case {}
+  decodeNodeToClient _ _ _ = error "DualByron: no query to decode"
 
 instance SerialiseResult DualByronBlock (BlockQuery DualByronBlock) where
   encodeResult _ _ = \case {}

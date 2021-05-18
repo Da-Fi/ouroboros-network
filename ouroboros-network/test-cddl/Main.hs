@@ -269,7 +269,7 @@ decodeMsg (tag, input) = case tag of
         runHandshake = run (versionNumberHandshakeCodec :: MonoCodec HS)
         handshakeParsers = [
               runHandshake (ClientAgency TokPropose)
-            , runHandshake (ServerAgency TokConfirm)
+            , runHandshake (ServerAgency TokConfirmServer)
             ]
 
         runTS = run codecTS

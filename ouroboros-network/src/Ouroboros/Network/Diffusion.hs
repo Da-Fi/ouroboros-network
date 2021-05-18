@@ -659,7 +659,8 @@ runDataDiffusion tracers
     -- demoting/promoting peers.
     rng <- newStdGen
     let (ledgerPeersRng, rng') = split rng
-        (policyRng, churnRng)  = split rng'
+        (policyRng, rng'')  = split rng'
+        (churnRng, fuzzRng) = split rng''
     policyRngVar <- newTVarIO policyRng
 
     churnModeVar <- newTVarIO ChurnModeNormal
@@ -883,6 +884,7 @@ runDataDiffusion tracers
                             dtTracePeerSelectionTracer
                             dtDebugPeerSelectionInitiatorTracer
                             dtTracePeerSelectionCounters
+                            fuzzRng
                             peerSelectionActions
                             (Diffusion.Policies.simplePeerSelectionPolicy
                               policyRngVar (readTVar churnModeVar) daPeerMetrics))
@@ -1007,6 +1009,7 @@ runDataDiffusion tracers
                           dtTracePeerSelectionTracer
                           dtDebugPeerSelectionInitiatorResponderTracer
                           dtTracePeerSelectionCounters
+                          fuzzRng
                           peerSelectionActions
                           (Diffusion.Policies.simplePeerSelectionPolicy
                             policyRngVar (readTVar churnModeVar) daPeerMetrics))

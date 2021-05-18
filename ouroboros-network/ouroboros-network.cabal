@@ -55,6 +55,7 @@ library
                        Ouroboros.Network.Counter
                        Ouroboros.Network.DeltaQ
                        Ouroboros.Network.Diffusion
+                       Ouroboros.Network.DiffusionP2P
                        Ouroboros.Network.Diffusion.Policies
                        Ouroboros.Network.KeepAlive
                        Ouroboros.Network.Magic

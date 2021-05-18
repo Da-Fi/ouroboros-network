@@ -65,7 +65,7 @@ import           Control.Monad.Class.MonadTime (MonadTime)
 import           Control.Monad.Class.MonadTimer (MonadTimer)
 
 import           Ouroboros.Network.BlockFetch (BlockFetchConfiguration (..))
-import           Ouroboros.Network.Diffusion
+import           Ouroboros.Network.DiffusionP2P
 import           Ouroboros.Network.Magic
 import           Ouroboros.Network.NodeToClient (LocalAddress,
                      NodeToClientVersionData (..))

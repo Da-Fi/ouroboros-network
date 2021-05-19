@@ -11,6 +11,7 @@ module Ouroboros.Network.Diffusion
   , AcceptedConnectionsLimit (..)
   , DiffusionApplications (..)
   , OuroborosApplication (..)
+  , nullTracers
   , runDataDiffusion
     -- * re-exports
   , simpleSingletonVersions
@@ -24,7 +25,7 @@ module Ouroboros.Network.Diffusion
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Exception
-import           Control.Tracer (Tracer, traceWith)
+import           Control.Tracer (Tracer, traceWith, nullTracer)
 import           Data.Functor (void)
 import           Data.Maybe (maybeToList)
 import           Data.Foldable (asum)
@@ -114,6 +115,21 @@ data DiffusionTracers = DiffusionTracers {
     , dtLedgerPeersTracer      :: Tracer IO TraceLedgerPeers
     }
 
+nullTracers :: DiffusionTracers
+nullTracers = DiffusionTracers {
+    dtIpSubscriptionTracer          = nullTracer
+  , dtDnsSubscriptionTracer         = nullTracer
+  , dtDnsResolverTracer             = nullTracer
+  , dtMuxTracer                     = nullTracer
+  , dtMuxLocalTracer                = nullTracer
+  , dtHandshakeTracer               = nullTracer
+  , dtHandshakeLocalTracer          = nullTracer
+  , dtErrorPolicyTracer             = nullTracer
+  , dtLocalErrorPolicyTracer        = nullTracer
+  , dtAcceptPolicyTracer            = nullTracer
+  , dtDiffusionInitializationTracer = nullTracer
+  , dtLedgerPeersTracer             = nullTracer
+  }
 
 -- | Network Node argumets
 --

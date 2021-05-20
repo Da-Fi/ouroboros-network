@@ -15,6 +15,7 @@ import           Data.Set (Set)
 import qualified Data.Set as Set
 
 import           Control.Monad.Class.MonadSTM
+import           Control.Monad.Class.MonadTime
 import           Control.Concurrent.JobPool (Job(..))
 import           Control.Exception (SomeException, assert)
 
@@ -196,6 +197,10 @@ belowTargetOther actions
     numActivePeers       = Set.size activePeers
     numPromoteInProgress = Set.size inProgressPromoteWarm
 
+-- | Re-promotion delay. Enough time for us to notice any asynchronously
+-- transitions which prevented the promotion.
+rePromotionDelay :: DiffTime
+rePromotionDelay = 10
 
 jobPromoteWarmPeer :: forall peeraddr peerconn m.
                       (Monad m, Ord peeraddr)
@@ -209,29 +214,32 @@ jobPromoteWarmPeer PeerSelectionActions{peerStateActions = PeerStateActions {act
   where
     handler :: SomeException -> Completion m peeraddr peerconn
     handler e =
-      --TODO: decide what happens if promotion fails, do we stay warm or go to
-      -- cold? Will this be reported asynchronously via the state monitoring?
+      -- Incase of an error we add a re-promotion delay and let monitoring
+      -- deal with setting the peer as cold if needed.
       Completion $ \st@PeerSelectionState {
                                activePeers,
+                               establishedPeers,
                                targets = PeerSelectionTargets {
                                            targetNumberOfActivePeers
                                          }
                              }
-                    _now -> Decision {
+                    now -> Decision {
         decisionTrace = TracePromoteWarmFailed targetNumberOfActivePeers
                                                (Set.size activePeers) 
                                                peeraddr e,
         decisionState = st {
                           inProgressPromoteWarm = Set.delete peeraddr
-                                                    (inProgressPromoteWarm st)
+                                                    (inProgressPromoteWarm st),
+                          establishedPeers = EstablishedPeers.setActivateTime
+                                               (Set.singleton peeraddr)
+                                               (rePromotionDelay `addTime` now)
+                                               establishedPeers
                         },
         decisionJobs  = []
       }
 
     job :: m (Completion m peeraddr peerconn)
     job = do
-      --TODO: decide if we should do timeouts here or if we should make that
-      -- the responsibility of activatePeerConnection
       activatePeerConnection peerconn
       return $ Completion $ \st@PeerSelectionState {
                                activePeers,

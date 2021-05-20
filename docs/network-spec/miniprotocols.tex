@@ -845,11 +845,14 @@ A blocking request on the other side, waits until at least one transaction is av
 \section{Handshake Mini Protocol}
 \hsref{src/Ouroboros/Network/Protocol/Handshake/Type.hs}
 \label{handshake-protocol}
-\newcommand{\Propose}{\state{Propose}}
-\newcommand{\Confirm}{\state{Confirm}}
-\newcommand{\ProposeVersions}{\msg{ProposeVersions}}
-\newcommand{\AcceptVersion}{\msg{AcceptVersion}}
-\newcommand{\Refuse}{\msg{Refuse}}
+\newcommand{\StPropose}{\state{StPropose}}
+\newcommand{\StConfirmAny}{\state{StConfirm peerRole}}
+\newcommand{\StConfirmAsServer}{\state{StConfirm AsServer}}
+\newcommand{\StConfirmAsClient}{\state{StConfirm AsClient}}
+\newcommand{\MsgProposeVersions}{\msg{MsgProposeVersions}}
+\newcommand{\MsgProposeVersionsX}{\msg{MsgProposeVersions'}}
+\newcommand{\MsgAcceptVersion}{\msg{MsgAcceptVersion}}
+\newcommand{\MsgRefuse}{\msg{MsgRefuse}}
 
 \newcommand{\VersionMismatch}{\msg{VersionMismatch}}
 \newcommand{\HandshakeDecodeError}{\msg{HandshakeDecodeError}}
@@ -869,44 +872,55 @@ A node, that runs the handshake protocol, must instantiate it with the set of
 supported protocol versions and callback functions for handling the protocol parameters.
 These callback functions are specific for the supported protocol versions.
 
+The handshake mini protocol can also handle simultantous TCP open.  For that
+resason its state machine is more complex than a request reponse protocol.
+
 \subsection{State machine}
 
 \begin{tabular}{|l|l|}
   \hline
-  \multicolumn{2}{|c|}{Agency} \\ \hline
-  Client has Agency & \Propose \\ \hline
-  Server has Agency & \Confirm \\  \hline
+  \multicolumn{2}{|c|}{Agency}   \\ \hline
+  Client has Agency & \StPropose, \StConfirmAsClient \\ \hline
+  Server has Agency & \StConfirmAsServer \\ \hline
 \end{tabular}
 
 \begin{tikzpicture}[->,>=stealth',shorten >=1pt,auto,node distance=5cm, semithick]
   \tikzstyle{every state}=[fill=red,draw=none,text=white]
-  \node[state, green, initial]                                     (Propose)    {\Propose};
-  \node[state, blue, right of=Propose]                             (Confirm)    {\Confirm};
-  \node[state, right of=Confirm]                                   (Done)       {\Done};
+  \node[state, green, initial]   (StPropose)         at (0,  0)  {\StPropose};
+  \node[state, blue]             (StConfirmAsServer) at (4,  2)  {\StConfirmAsServer};
+  \node[state, green]            (StConfirmAsClient) at (4, -2) {\StConfirmAsClient};
+  \node[state, right of=Confirm] (StDone)            at (7,  0)  {\StDone};
 
-  \draw (Propose)      edge[]      node{\ProposeVersions}          (Confirm);
-  \draw (Confirm)      edge[above, bend left]       node{\AcceptVersion}     (Done);
-  \draw (Confirm)      edge[below, bend right]      node{\Refuse}            (Done);
-
+  \draw (StPropose) edge[] node{\MsgProposeVersions} (StConfirmAsServer);
+  \draw[->] (StConfirmAsServer.10)  to [out=5, in=160]  node[above right]{\MsgAcceptVersion} (StDone.west);
+  \draw[->] (StConfirmAsServer.350) to [out=-5, in=170] node[below left]{\MsgRefuse} (StDone.west);
+  \draw[->] (StConfirmAsServer)     -- node[fill=white, right=-60pt]{\MsgProposeVersions} (StConfirmAsClient);
+  \draw[->] (StConfirmAsClient.10)  to [out=5, in=190]  node[above left]{\MsgAcceptVersion} (StDone.west);
+  \draw[->] (StConfirmAsClient.350) to [out=-5, in=200] node[below right]{\MsgRefuse} (StDone.west);
 \end{tikzpicture}
 
 Messages of the protocol:
 \begin{description}
-\item [\ProposeVersions{} {\boldmath $(versionTable)$}]
+\item [\MsgProposeVersions{} {\boldmath $(versionTable)$}]
       The client proposes a number of possible versions and protocol parameters.
-\item [\AcceptVersion{} {\boldmath $(versionNumber,extraParameters)$}]
+      In TCP simultanous open the client will receive
+      \MsgProposeVersions{} as a reply to \MsgProposeVersions{}.
+\item [\MsgAcceptVersion{} {\boldmath $(versionNumber,extraParameters)$}]
       The server accepts $versionNumber$ and returns possible extra protocol parameters.
-\item [\Refuse{} {\boldmath $(reason)$}]
+\item [\MsgRefuse{} {\boldmath $(reason)$}]
       The server refuses the proposed versions.
 \end{description}
 
+{\small
 \begin{tabular}{|l|l|l|l|} \hline
 \multicolumn{4}{|c|}{Transition table} \\ \hline
-  from        & message/event      & parameters                   & to          \\ \hline\hline
-  \Propose    & \ProposeVersions   & $versionTable$              & \Confirm    \\ \hline
-  \Confirm    & \AcceptVersion     & $(versionNumber,extraParameters)$ & \Done \\ \hline
-  \Confirm    & \Refuse            & $reason$                     & \Done \\ \hline
+  from               & message/event         & parameters                        & to \\ \hline\hline
+  \StPropose         & \MsgProposeVersions   & $versionTable$                    & \StConfirmAsServer \\ \hline
+  \StConfirmAsServer & \MsgProposeVersions   & $versionTable$                    & \StConfirmAsClient \\ \hline
+  \StConfirmAny      & \MsgAcceptVersion     & $(versionNumber,extraParameters)$ & \StDone \\ \hline
+  \StConfirmAny      & \MsgRefuse            & $reason$                          & \StDone \\ \hline
 \end{tabular}
+}
 
 \subsection{Client and Server Implementation}
 Section~\ref{included-cddl} contains the CDDL-specification of the binary format of the handshake messages.
@@ -918,14 +932,14 @@ and appear in ascending order.
 table. Therefor the CDDL-specification uses a table with keys from 1 to 4 as an example.)
 
 In a run of the handshake mini protocol the peers exchange only two messages:
-The client requests to connect with a \ProposeVersions{} message that contains information about
+The client requests to connect with a \MsgProposeVersions{} message that contains information about
 all protocol versions it wants to support.
-The server replies either with an \AcceptVersion{} message containing the negotiated
-version number and extra parameters or a \Refuse{} message.
-The \Refuse{} message contains one of three alternative refuse reasons:
+The server replies either with an \MsgAcceptVersion{} message containing the negotiated
+version number and extra parameters or a \MsgRefuse{} message.
+The \MsgRefuse{} message contains one of three alternative refuse reasons:
 \VersionMismatch{}, \HandshakeDecodeError{} or just \Refused{}.
 
-When a server receives a \ProposeVersions{} message it uses the following algorithm to
+When a server receives a \MsgProposeVersions{} message it uses the following algorithm to
 compute the response:
 \begin{enumerate}
 \item
@@ -933,7 +947,7 @@ compute the response:
   and the version numbers requested by the client.
 \item
   If the intersection is empty:
-  Reply with \Refuse(\VersionMismatch) and the list of protocol numbers the server supports.
+  Reply with \MsgRefuse(\VersionMismatch) and the list of protocol numbers the server supports.
 \item
   Otherwise:
   Select the protocol with the highest version number in the intersection.
@@ -941,16 +955,16 @@ compute the response:
   Run the protocol specific decoder on the CBOR term that contains the protocol parameters.
 \item
   If the decoder fails:
-  Reply with \Refuse(\HandshakeDecodeError), the selected version number and an error message.
+  Reply with \MsgRefuse(\HandshakeDecodeError), the selected version number and an error message.
 \item
   Otherwise: Test the proposed protocol parameters of the selected protocol version
 \item
   If the test refuses the parameters:
-  Reply with \Refuse(\Refused), the selected version number and an error message.
+  Reply with \MsgRefuse(\Refused), the selected version number and an error message.
 \item
   Otherwise:
   Encode the extra parameters and
-  reply with \AcceptVersion, the selected version number and the extra parameters.
+  reply with \MsgAcceptVersion, the selected version number and the extra parameters.
 \end{enumerate}
 Note, that in step 4), 6) and 8) the handshake protocol uses the callback functions that are specific
 for set of protocols that the server supports.

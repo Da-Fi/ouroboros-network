@@ -498,14 +498,14 @@ instance ( Show peerAddr
     fromException = peerSelectionActionExceptionFromException
 
 
-data ColdConnectionException peerAddr
-    = ColdActivationException  !(ConnectionId peerAddr)
+data ColdActionException peerAddr
+    = ColdActivationException   !(ConnectionId peerAddr)
     | ColdDeactivationException !(ConnectionId peerAddr)
   deriving Show
 
 instance ( Show peerAddr
          , Typeable peerAddr
-         ) => Exception (ColdConnectionException peerAddr) where
+         ) => Exception (ColdActionException peerAddr) where
     toException   = peerSelectionActionExceptionToException
     fromException = peerSelectionActionExceptionFromException
 
@@ -775,6 +775,9 @@ withPeerStateActions timeout
 
 
     -- Take a warm peer and promote it to a hot one.
+    -- NB when adding any operations that can block for an extended period of
+    -- of time timeouts should be implemented here in the same way it is in
+    -- establishPeerConnection and deactivatePeerConnection.
     activatePeerConnection :: PeerConnectionHandle muxMode peerAddr ByteString m a b
                            -> m ()
     activatePeerConnection
@@ -783,17 +786,17 @@ withPeerStateActions timeout
             pchPeerState,
             pchAppHandles } = do
       -- quiesce warm peer protocols and set hot ones in 'Continue' mode.
-      continue <- atomically $ do
+      wasWarm <- atomically $ do
         -- if the peer is cold we can't activate it.
         notCold <- updateUnlessCold pchPeerState PromotingToHot
         when notCold $ do
           writeTVar (getControlVar TokHot pchAppHandles) Continue
           writeTVar (getControlVar TokWarm pchAppHandles) Quiesce
         return notCold
-      when (not continue) $ do
+      when (not wasWarm) $ do
         traceWith spsTracer (PeerStatusChangeFailure
-                             (WarmToHot pchConnectionId)
-                             ActiveCold)
+                              (WarmToHot pchConnectionId)
+                              ActiveCold)
         throwIO $ ColdActivationException pchConnectionId
 
       -- start hot peer protocols
@@ -801,13 +804,13 @@ withPeerStateActions timeout
 
       -- Only set the status to PeerHot if the peer isn't PeerCold.
       -- This can happen asynchronously between the check above and now.
-      suc <- atomically $ updateUnlessCold pchPeerState (PeerStatus PeerHot)
-      if suc
+      wasWarm' <- atomically $ updateUnlessCold pchPeerState (PeerStatus PeerHot)
+      if wasWarm'
          then traceWith spsTracer (PeerStatusChanged (WarmToHot pchConnectionId))
          else do
            traceWith spsTracer (PeerStatusChangeFailure
-                                (WarmToHot pchConnectionId)
-                                ActiveCold)
+                                 (WarmToHot pchConnectionId)
+                                 ActiveCold)
            throwIO $ ColdActivationException pchConnectionId
 
 
@@ -820,13 +823,13 @@ withPeerStateActions timeout
             pchMux,
             pchAppHandles
           } = do
-      continue <- atomically $ do
+      wasWarm <- atomically $ do
         notCold <- updateUnlessCold pchPeerState DemotingToWarm
         when notCold $ do
           writeTVar (getControlVar TokHot pchAppHandles) Terminate
           writeTVar (getControlVar TokWarm pchAppHandles) Continue
         return notCold
-      when (not continue) $ do
+      when (not wasWarm) $ do
         -- The governor attempted to demote an already cold peer.
         traceWith spsTracer (PeerStatusChangeFailure
                              (HotToWarm pchConnectionId)
@@ -855,7 +858,7 @@ withPeerStateActions timeout
           throwIO (MiniProtocolExceptions errs)
 
         Just AllSucceeded -> do
-          suc <- atomically $ do
+          wasWarm' <- atomically $ do
             -- Only set the status to PeerWarm if the peer isn't PeerCold
             -- (can happen asynchronously).
             notCold <- updateUnlessCold pchPeerState (PeerStatus PeerWarm)
@@ -868,7 +871,7 @@ withPeerStateActions timeout
                                ))
             return notCold
 
-          if suc
+          if wasWarm'
              then traceWith spsTracer (PeerStatusChanged (HotToWarm pchConnectionId))
              else do
                  traceWith spsTracer (PeerStatusChangeFailure

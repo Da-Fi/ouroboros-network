@@ -17,6 +17,8 @@ module Ouroboros.Consensus.Ledger.Query (
   , answerQuery
   ) where
 
+import           Codec.CBOR.Decoding
+import           Codec.CBOR.Encoding
 import           Data.Kind (Type)
 import           Data.Maybe (isJust)
 
@@ -52,8 +54,18 @@ instance Show (SomeSecond BlockQuery blk) => Show (SomeSecond Query blk) where
   show (SomeSecond (BlockQuery blockQueryA)) = "Query " ++ show (SomeSecond blockQueryA)
 
 instance SerialiseNodeToClient blk (SomeSecond BlockQuery blk) => SerialiseNodeToClient blk (SomeSecond Query blk) where
-  encodeNodeToClient codecConfig queryVersion blockVersion (SomeSecond (BlockQuery blockQuery))
-    = encodeNodeToClient
+  encodeNodeToClient codecConfig queryVersion blockVersion (SomeSecond query)
+    = case queryVersion of
+      TopLevelQueryDisabled -> encodeBlockQuery
+        (case query of
+          BlockQuery blockQuery -> blockQuery
+        )
+      QueryV_1 -> case query of
+        BlockQuery blockQuery ->
+          encodeWord8 0
+          <> encodeBlockQuery blockQuery
+    where
+      encodeBlockQuery blockQuery = encodeNodeToClient
         @blk
         @(SomeSecond BlockQuery blk)
         codecConfig
@@ -61,14 +73,23 @@ instance SerialiseNodeToClient blk (SomeSecond BlockQuery blk) => SerialiseNodeT
         blockVersion
         (SomeSecond blockQuery)
 
-  decodeNodeToClient codecConfig queryVersion blockVersion = do
-    SomeSecond blockQuery <- decodeNodeToClient
-        @blk
-        @(SomeSecond BlockQuery blk)
-        codecConfig
-        queryVersion
-        blockVersion
-    return (SomeSecond (BlockQuery blockQuery))
+  decodeNodeToClient codecConfig queryVersion blockVersion
+    = case queryVersion of
+        TopLevelQueryDisabled -> decodeBlockQuery
+        QueryV_1 -> do
+          tag <- decodeWord8
+          case tag of
+            0 -> decodeBlockQuery
+            _ -> error $ "decodeNodeToClient: SomeSecond Query blk: unknown tag " ++ show tag
+    where
+      decodeBlockQuery = do
+        SomeSecond blockQuery <- decodeNodeToClient
+          @blk
+          @(SomeSecond BlockQuery blk)
+          codecConfig
+          queryVersion
+          blockVersion
+        return (SomeSecond (BlockQuery blockQuery))
 
 instance SerialiseResult blk (BlockQuery blk) => SerialiseResult blk (Query blk) where
   encodeResult codecConfig blockVersion (BlockQuery blockQuery) result

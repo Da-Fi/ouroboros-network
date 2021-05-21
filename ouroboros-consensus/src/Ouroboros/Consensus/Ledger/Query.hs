@@ -11,8 +11,8 @@
 module Ouroboros.Consensus.Ledger.Query (
     BlockQuery
   , Query (..)
-  , QueryVersion (..)
   , QueryLedger (..)
+  , QueryVersion (..)
   , ShowQuery (..)
   , answerQuery
   ) where

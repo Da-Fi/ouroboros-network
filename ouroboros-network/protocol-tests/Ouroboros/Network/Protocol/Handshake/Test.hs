@@ -42,6 +42,7 @@ import           Ouroboros.Network.Driver.Simple ( runPeer
                                                  )
 
 import           Ouroboros.Network.Protocol.Handshake.Type
+import           Ouroboros.Network.Protocol.Handshake.Proofs
 import           Ouroboros.Network.Protocol.Handshake.Client
 import           Ouroboros.Network.Protocol.Handshake.Server
 import           Ouroboros.Network.Protocol.Handshake.Codec
@@ -63,6 +64,7 @@ tests =
   , testProperty "pipe IO"               prop_pipe_IO
   , testProperty "channel asymmetric ST" prop_channel_asymmetric_ST
   , testProperty "channel asymmetric IO" prop_channel_asymmetric_IO
+  , testProperty "connect clients"       prop_connect_clients
   , testProperty "simultaneous open ST"  prop_channel_simultaneous_open_ST
   , testProperty "simultaneous open IO"  prop_channel_simultaneous_open_IO
   , testProperty "pipe asymmetric IO"    prop_pipe_asymmetric_IO
@@ -538,6 +540,35 @@ prop_channel_asymmetric_IO (ArbitraryVersions clientVersions _serverVersions) =
 prop_pipe_asymmetric_IO :: ArbitraryVersions -> Property
 prop_pipe_asymmetric_IO (ArbitraryVersions clientVersions _serverVersions) =
     ioProperty (prop_channel_asymmetric createPipeConnectedChannels clientVersions)
+
+
+prop_connect_clients
+    :: ArbitraryVersions
+    -> Property
+prop_connect_clients (ArbitraryVersions clientVersions clientVersions') =
+  let (eClientRes, eClientRes') =
+        pureHandshake
+          ((maybeAccept .) . acceptableVersion)
+          clientVersions'
+          clientVersions
+  in case runSimOrThrow
+           (connect_clients
+              (handshakeClientPeer
+                (cborTermVersionDataCodec dataCodecCBORTerm)
+                acceptableVersion
+                clientVersions)
+              (handshakeClientPeer
+                (cborTermVersionDataCodec dataCodecCBORTerm)
+                acceptableVersion
+                clientVersions')) of
+      (rClientRes, rClientRes', TerminalStates TokDone TokDone) ->
+           fromMaybe False eClientRes
+           ===
+           either (const False) (\(a,_,_) -> a) rClientRes
+        .&&.
+           fromMaybe False eClientRes'
+           ===
+           either (const False) (\(a,_,_) -> a) rClientRes'
 
 
 -- | Run two handshake clients against each other, which simulates a TCP

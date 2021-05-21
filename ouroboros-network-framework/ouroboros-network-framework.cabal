@@ -35,6 +35,7 @@ library
 
                        Ouroboros.Network.Protocol.Handshake
                        Ouroboros.Network.Protocol.Handshake.Type
+                       Ouroboros.Network.Protocol.Handshake.Proofs
                        Ouroboros.Network.Protocol.Handshake.Codec
                        Ouroboros.Network.Protocol.Handshake.Client
                        Ouroboros.Network.Protocol.Handshake.Server

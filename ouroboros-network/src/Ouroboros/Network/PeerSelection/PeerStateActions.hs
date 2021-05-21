@@ -52,8 +52,7 @@ import           Ouroboros.Network.Channel (fromChannel)
 import           Ouroboros.Network.Mux
 import           Ouroboros.Network.Protocol.Handshake
                    ( HandshakeException
-                   , HandshakeClientProtocolError
-                   , RefuseReason
+                   , HandshakeProtocolError
                    )
 import           Ouroboros.Network.PeerSelection.Governor
                    ( PeerStateActions (..)
@@ -471,11 +470,11 @@ peerSelectionActionExceptionFromException x = do
 data EstablishConnectionException versionNumber
       -- | Handshake client failed
     = ClientException
-        !(HandshakeException (HandshakeClientProtocolError versionNumber))
+        !(HandshakeException (HandshakeProtocolError versionNumber))
 
       -- | Handshake server failed
     | ServerException
-        !(HandshakeException (RefuseReason versionNumber))
+        !(HandshakeException (HandshakeProtocolError versionNumber))
   deriving Show
 
 instance ( Show versionNumber

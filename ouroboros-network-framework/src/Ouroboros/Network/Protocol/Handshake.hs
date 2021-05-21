@@ -10,7 +10,7 @@ module Ouroboros.Network.Protocol.Handshake
   , runHandshakeServer
   , HandshakeArguments (..)
   , HandshakeException (..)
-  , HandshakeClientProtocolError (..)
+  , HandshakeProtocolError (..)
   , RefuseReason (..)
   , Accept (..)
   ) where
@@ -122,7 +122,7 @@ runHandshakeClient
     => MuxBearer m
     -> connectionId
     -> HandshakeArguments connectionId vNumber vData m application
-    -> m (Either (HandshakeException (HandshakeClientProtocolError vNumber))
+    -> m (Either (HandshakeException (HandshakeProtocolError vNumber))
                  (application, vNumber, vData))
 runHandshakeClient bearer
                    connectionId
@@ -160,7 +160,7 @@ runHandshakeServer
     -> connectionId
     -> HandshakeArguments connectionId vNumber vData m application
     -> m (Either
-           (HandshakeException (RefuseReason vNumber))
+           (HandshakeException (HandshakeProtocolError vNumber))
            (application, vNumber, vData))
 runHandshakeServer bearer
                    connectionId

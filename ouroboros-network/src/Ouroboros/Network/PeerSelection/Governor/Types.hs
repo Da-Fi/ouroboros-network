@@ -7,7 +7,7 @@
 
 module Ouroboros.Network.PeerSelection.Governor.Types where
 
-import           Data.Cache (Cache)
+import           Data.Cache (Cache (..))
 import           Data.Semigroup (Min(..))
 import qualified Data.Map.Strict as Map
 import           Data.Map.Strict (Map)
@@ -260,7 +260,10 @@ data PeerSelectionState peeraddr peerconn = PeerSelectionState {
        inProgressDemoteWarm     :: !(Set peeraddr),
        inProgressDemoteHot      :: !(Set peeraddr),
 
-       countersCache :: Cache PeerSelectionCounters
+       -- | 'PeerSelectionCounters' counters cache. Allows to only trace
+       -- values when necessary.
+       --
+       countersCache :: !(Cache PeerSelectionCounters)
 
 --     TODO: need something like this to distinguish between lots of bad peers
 --     and us getting disconnected from the network locally. We don't want a
@@ -302,7 +305,8 @@ emptyPeerSelectionState =
       inProgressPromoteCold    = Set.empty,
       inProgressPromoteWarm    = Set.empty,
       inProgressDemoteWarm     = Set.empty,
-      inProgressDemoteHot      = Set.empty
+      inProgressDemoteHot      = Set.empty,
+      countersCache            = Cache (PeerSelectionCounters 0 0 0)
     }
 
 
